@@ -12,7 +12,9 @@ import time
 import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
+
 LOGIN_SID_ROUTE = "/login_sid.lua?version=2"
+
 class LoginState:
  def __init__(self, challenge: str, blocktime: int):
   self.challenge = challenge
@@ -44,7 +46,7 @@ password)
   raise Exception("wrong username or password")
  return sid
 def get_login_state(box_url: str) -> LoginState:
-""" Get login state from FRITZ!Box using login_sid.lua?version=2 """
+ """ Get login state from FRITZ!Box using login_sid.lua?version=2 """
  url = box_url + LOGIN_SID_ROUTE
  http_response = urllib.request.urlopen(url)
  xml = ET.fromstring(http_response.read())
@@ -74,8 +76,7 @@ def calculate_md5_response(challenge: str, password: str) -> str:
  md5_sum.update(response)
  response = challenge + "-" + md5_sum.hexdigest()
  return response
-def send_response(box_url: str, username: str, challenge_response: str) ->
-str:
+def send_response(box_url: str, username: str, challenge_response: str) ->str:
  """ Send the response and return the parsed sid. raises an Exception on 
 error """
  # Build response params
@@ -101,5 +102,23 @@ def main():
  sid = get_sid(url, username, password)
  print(f"Successful login for user: {username}")
  print(f"sid: {sid}")
+
+
+def main_env():
+ import os
+ from dotenv import load_dotenv
+ 
+ # Load environment variables from .env file
+ load_dotenv()
+ 
+ # Access environment variables using os. 
+ url = os.getenv('URL_FRITZBOX') 
+ username = os.getenv('USER')
+ password = os.getenv('PASS')
+ sid = get_sid(url, username, password)
+ print(f"Successful login for user: {username}")
+ print(f"sid: {sid}")
+
+
 if __name__ == "__main__":
- main()
+ main_env()
