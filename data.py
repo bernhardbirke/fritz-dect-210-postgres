@@ -1,4 +1,3 @@
-Example Code: Python3 
 #!/usr/bin/env python3
 # vim: expandtab sw=4 ts=4
 """
@@ -16,33 +15,33 @@ import xml.etree.ElementTree as ET
 LOGIN_SID_ROUTE = "/login_sid.lua?version=2"
 class LoginState:
  def __init__(self, challenge: str, blocktime: int):
- self.challenge = challenge
- self.blocktime = blocktime
- self.is_pbkdf2 = challenge.startswith("2$")
+  self.challenge = challenge
+  self.blocktime = blocktime
+  self.is_pbkdf2 = challenge.startswith("2$")
 def get_sid(box_url: str, username: str, password: str) -> str:
  """ Get a sid by solving the PBKDF2 (or MD5) challenge-response 
 process. """
  try:
- state = get_login_state(box_url)
+  state = get_login_state(box_url)
  except Exception as ex:
- raise Exception("failed to get challenge") from ex
+  raise Exception("failed to get challenge") from ex
  if state.is_pbkdf2:
- print("PBKDF2 supported")
- challenge_response = calculate_pbkdf2_response(state.challenge,
+  print("PBKDF2 supported")
+  challenge_response = calculate_pbkdf2_response(state.challenge,
 password)
  else:
- print("Falling back to MD5")
- challenge_response = calculate_md5_response(state.challenge,
+  print("Falling back to MD5")
+  challenge_response = calculate_md5_response(state.challenge,
 password)
  if state.blocktime > 0:
- print(f"Waiting for {state.blocktime} seconds...")
- time.sleep(state.blocktime)
+  print(f"Waiting for {state.blocktime} seconds...")
+  time.sleep(state.blocktime)
  try:
- sid = send_response(box_url, username, challenge_response)
+  sid = send_response(box_url, username, challenge_response)
  except Exception as ex:
- raise Exception("failed to login") from ex
+  raise Exception("failed to login") from ex
  if sid == "0000000000000000":
- raise Exception("wrong username or password")
+  raise Exception("wrong username or password")
  return sid
 def get_login_state(box_url: str) -> LoginState:
 """ Get login state from FRITZ!Box using login_sid.lua?version=2 """
@@ -92,10 +91,10 @@ error """
  return xml.find("SID").text
 def main():
  if len(sys.argv) < 4:
- print(
+  print(
  f"Usage: {sys.argv[0]} http://fritz.box user pass"
  )
- exit(1)
+  exit(1)
  url = sys.argv[1]
  username = sys.argv[2]
  password = sys.argv[3]
