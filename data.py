@@ -9,19 +9,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Constants
-#IP_FRITZBOX = os.getenv("IP_FRITZBOX") 
-#USER = os.getenv("USER")
-#PASSWORD = os.getenv("PASSWORD")
-
-
-#runfile with python fritzbox_reader.py <device_name> <value_type> 
+#runfile with python data.py
 
 def fetch_challenge(ip_fritzbox = None) -> str:
     """Fetch the challenge token from the FritzBox. and return it. (ie 299bad94)"""
     if not ip_fritzbox:
     	ip_fritzbox = os.getenv("IP_FRITZBOX")  
-    response = requests.get(f"{ip_fritzbox}/login_sid.lua")
+    response = requests.get(f"http://{ip_fritzbox}/login_sid.lua")
     root = ET.fromstring(response.content)
     return root.find('Challenge').text
 
@@ -36,7 +30,8 @@ def perform_login(challenge, ip_fritzbox = None, username = None, password = Non
     
     md5 = hashlib.md5((challenge + '-' + password).encode('utf-16le')).hexdigest()
     response = challenge + '-' + md5
-    login_response = requests.post(f"{ip_fritzbox}/login_sid.lua", data={'response': response, 'username': username})
+    url_params=f"username={username}&response={response}"
+    login_response = requests.post(f"http://{ip_fritzbox}/login_sid.lua?{url_params}")
     root = ET.fromstring(login_response.content)
     return root.find('SID').text
 
@@ -44,5 +39,13 @@ def perform_login(challenge, ip_fritzbox = None, username = None, password = Non
 
 if __name__ == "__main__":
     challenge = fetch_challenge()
+    print(challenge)
     sid = perform_login(challenge)
     print(sid)
+ #   challenge = "1234567z"
+ #   password = "äbc"
+ #   md5 = hashlib.md5((challenge + '-' + password).encode('utf-16le')).hexdigest()
+    
+#    response = challenge + '-' + md5
+#    print(response)
+ #   print("1234567z-9e224a41eeefa284df7bb0f26c2913e2" == response)
