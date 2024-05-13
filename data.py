@@ -76,7 +76,7 @@ def calculate_md5_response(challenge: str, password: str) -> str:
  md5_sum.update(response)
  response = challenge + "-" + md5_sum.hexdigest()
  return response
-def send_response(box_url: str, username: str, challenge_response: str) ->str:
+def send_response(box_url: str, username: str, challenge_response: str) -> str:
  """ Send the response and return the parsed sid. raises an Exception on 
 error """
  # Build response params
@@ -113,8 +113,8 @@ def main_env():
  
  # Access environment variables using os. 
  url = os.getenv('URL_FRITZBOX') 
- username = os.getenv('USER')
- password = os.getenv('PASS')
+ username = os.getenv('USER_FRITZBOX')
+ password = os.getenv('PASS_FRITZBOX')
  sid = get_sid(url, username, password)
  print(f"Successful login for user: {username}")
  print(f"sid: {sid}")
