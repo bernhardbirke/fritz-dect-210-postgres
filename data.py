@@ -10,9 +10,12 @@ import sys
 import hashlib
 import time
 import requests
+import urllib.request
+import urllib.parse
 import xml.etree.ElementTree as ET
 
 LOGIN_SID_ROUTE = "/login_sid.lua?version=2"
+AUTOSWITCH_ROUTE = "/webservices/homeautoswitch.lua"
 
 class LoginState:
  def __init__(self, challenge: str, blocktime: int):
@@ -46,7 +49,7 @@ password)
   raise Exception("wrong username or password")
  return sid
 
-def get_login_state_old(box_url: str) -> LoginState:
+def get_login_state(box_url: str) -> LoginState:
  """ Get login state from FRITZ!Box using login_sid.lua?version=2 """
  url = box_url + LOGIN_SID_ROUTE
  http_response = urllib.request.urlopen(url)
@@ -55,25 +58,6 @@ def get_login_state_old(box_url: str) -> LoginState:
  challenge = xml.find("Challenge").text
  blocktime = int(xml.find("BlockTime").text)
  return LoginState(challenge, blocktime)
-
-def get_login_state(box_url: str) -> LoginState:
-  """
-  Get login state from FRITZ!Box using login_sid.lua?version=2
-  """
-  # Build the URL
-  url = box_url + LOGIN_SID_ROUTE
-  # Send GET request
-  response = requests.get(url)
-  # Raise an exception for non-200 status codes
-  response.raise_for_status()
-  # Parse the XML response
-  xml = ET.fromstring(response.content)
-  # Extract challenge and blocktime
-  challenge = xml.find("Challenge").text
-  blocktime = int(xml.find("BlockTime").text)
-  # Return LoginState object
-  return LoginState(challenge, blocktime)
-
 
 
 def calculate_pbkdf2_response(challenge: str, password: str) -> str:
@@ -100,7 +84,7 @@ def calculate_md5_response(challenge: str, password: str) -> str:
  response = challenge + "-" + md5_sum.hexdigest()
  return response
 
-def send_response_old(box_url: str, username: str, challenge_response: str) -> str:
+def send_response(box_url: str, username: str, challenge_response: str) -> str:
  """ Send the response and return the parsed sid. raises an Exception on 
 error """
  # Build response params
@@ -115,23 +99,26 @@ error """
  xml = ET.fromstring(http_response.read())
  return xml.find("SID").text
 
-def send_response(box_url: str, username: str, challenge_response: str) -> str:
-  """
-  Send the response and return the parsed sid. Raises an exception on error.
-  """
-  # Build the URL
-  url = box_url + LOGIN_SID_ROUTE
-  # Prepare the data
-  data = {"username": username, "response": challenge_response}
-  # Send POST request with JSON data and headers
-  response = requests.post(url, json=data, headers={"Content-Type": "application/json"})
-  # Raise an exception for non-200 status codes
-  response.raise_for_status()
-  # Parse the XML response
-  xml = ET.fromstring(response.content)
-
-  # Return the SID text
-  return xml.find("SID").text
+def retrieve_data(box_url:str, sid: str, switchcmd:str,ain: str = None, **kwargs) -> str | int:
+    """
+    get data from fritzbox using http requests.
+    """
+    parameter = {ain:ain, switchcmd:switchcmd,sid: sid}
+    #add optional parameter
+    parameter.update(kwargs)
+    url = box_url + AUTOSWITCH_ROUTE
+    response = requests.get(url, params=parameter)
+    print(response.url)
+    print(response.text)
+    xml = ET.fromstring(response.content)
+    
+    # Extract challenge and blocktime
+    #challenge = xml.find("Challenge").text
+    #blocktime = int(xml.find("BlockTime").text)
+    
+  #  http://fritz.box/webservices/homeautoswitch.lua?ain=<ain>&switchcmd=<cmd>&sid=<sid>
+  #  http://fritz.box/webservices/homeautoswitch.lua?switchcmd=getdevicelistinfos&sid=2fc2abc28cbadea1
+  #  http://fritz.box/webservices/homeautoswitch.lua?ain=11657%200626533&switchcmd=gettemperature&sid=ae9e7c552595ca9e
 
 
 def main():
@@ -159,10 +146,12 @@ def main_env():
  url = os.getenv('URL_FRITZBOX') 
  username = os.getenv('USER_FRITZBOX')
  password = os.getenv('PASS_FRITZBOX')
+ ain = os getenv('AIN_210_1')
  sid = get_sid(url, username, password)
  print(f"Successful login for user: {username}")
  print(f"sid: {sid}")
-
+ switchcmd = getdevicelistinfos
+ retrieve_data(url, sid, switchcmd)
 
 if __name__ == "__main__":
  main_env()
