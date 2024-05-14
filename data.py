@@ -9,8 +9,7 @@ AVM 2020-09-25
 import sys
 import hashlib
 import time
-import urllib.request
-import urllib.parse
+import requests
 import xml.etree.ElementTree as ET
 
 LOGIN_SID_ROUTE = "/login_sid.lua?version=2"
@@ -20,6 +19,7 @@ class LoginState:
   self.challenge = challenge
   self.blocktime = blocktime
   self.is_pbkdf2 = challenge.startswith("2$")
+
 def get_sid(box_url: str, username: str, password: str) -> str:
  """ Get a sid by solving the PBKDF2 (or MD5) challenge-response 
 process. """
@@ -45,7 +45,8 @@ password)
  if sid == "0000000000000000":
   raise Exception("wrong username or password")
  return sid
-def get_login_state(box_url: str) -> LoginState:
+
+def get_login_state_old(box_url: str) -> LoginState:
  """ Get login state from FRITZ!Box using login_sid.lua?version=2 """
  url = box_url + LOGIN_SID_ROUTE
  http_response = urllib.request.urlopen(url)
@@ -54,6 +55,27 @@ def get_login_state(box_url: str) -> LoginState:
  challenge = xml.find("Challenge").text
  blocktime = int(xml.find("BlockTime").text)
  return LoginState(challenge, blocktime)
+
+def get_login_state(box_url: str) -> LoginState:
+  """
+  Get login state from FRITZ!Box using login_sid.lua?version=2
+  """
+  # Build the URL
+  url = box_url + LOGIN_SID_ROUTE
+  # Send GET request
+  response = requests.get(url)
+  # Raise an exception for non-200 status codes
+  response.raise_for_status()
+  # Parse the XML response
+  xml = ET.fromstring(response.content)
+  # Extract challenge and blocktime
+  challenge = xml.find("Challenge").text
+  blocktime = int(xml.find("BlockTime").text)
+  # Return LoginState object
+  return LoginState(challenge, blocktime)
+
+
+
 def calculate_pbkdf2_response(challenge: str, password: str) -> str:
  """ Calculate the response for a given challenge via PBKDF2 """
  challenge_parts = challenge.split("$")
@@ -67,6 +89,7 @@ def calculate_pbkdf2_response(challenge: str, password: str) -> str:
  # Once with dynamic salt.
  hash2 = hashlib.pbkdf2_hmac("sha256", hash1, salt2, iter2)
  return f"{challenge_parts[4]}${hash2.hex()}"
+
 def calculate_md5_response(challenge: str, password: str) -> str:
  """ Calculate the response for a challenge using legacy MD5 """
  response = challenge + "-" + password
@@ -76,7 +99,8 @@ def calculate_md5_response(challenge: str, password: str) -> str:
  md5_sum.update(response)
  response = challenge + "-" + md5_sum.hexdigest()
  return response
-def send_response(box_url: str, username: str, challenge_response: str) -> str:
+
+def send_response_old(box_url: str, username: str, challenge_response: str) -> str:
  """ Send the response and return the parsed sid. raises an Exception on 
 error """
  # Build response params
@@ -90,6 +114,26 @@ error """
  # Parse SID from resulting XML.
  xml = ET.fromstring(http_response.read())
  return xml.find("SID").text
+
+def send_response(box_url: str, username: str, challenge_response: str) -> str:
+  """
+  Send the response and return the parsed sid. Raises an exception on error.
+  """
+  # Build the URL
+  url = box_url + LOGIN_SID_ROUTE
+  # Prepare the data
+  data = {"username": username, "response": challenge_response}
+  # Send POST request with JSON data and headers
+  response = requests.post(url, json=data, headers={"Content-Type": "application/json"})
+  # Raise an exception for non-200 status codes
+  response.raise_for_status()
+  # Parse the XML response
+  xml = ET.fromstring(response.content)
+
+  # Return the SID text
+  return xml.find("SID").text
+
+
 def main():
  if len(sys.argv) < 4:
   print(
