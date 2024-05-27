@@ -109,18 +109,8 @@ def retrieve_data(box_url:str, sid: str, switchcmd:str,ain: str = None, **kwargs
     parameter.update(kwargs)
     url = box_url + AUTOSWITCH_ROUTE
     response = requests.get(url, params=parameter)
-    print(response.url)
-    print(response.text)
-    xml = ET.fromstring(response.content)
-    
-    # Extract power, energy and voltage
-    #power = xml.find("power").text
-   # energy = int(xml.find("energy").text)
-  #  voltage = int(xml.find("voltage").text)
-  #  print(power,energy,voltage)
-  #  http://fritz.box/webservices/homeautoswitch.lua?ain=<ain>&switchcmd=<cmd>&sid=<sid>
-  #  http://fritz.box/webservices/homeautoswitch.lua?switchcmd=getdevicelistinfos&sid=2fc2abc28cbadea1
-  #  http://fritz.box/webservices/homeautoswitch.lua?ain=11657%200626533&switchcmd=gettemperature&sid=ae9e7c552595ca9e
+    #print(response.url)
+    return (response.text)
 
 
 def main():
@@ -148,7 +138,7 @@ def main_env():
  url = os.getenv('URL_FRITZBOX') 
  username = os.getenv('USER_FRITZBOX')
  password = os.getenv('PASS_FRITZBOX')
- ain = os.getenv('AIN_210_1')
+ ain_210 = os.getenv('AIN_210_1')
  sid = get_sid(url, username, password)
  print(f"Successful login for user: {username}")
  print(f"sid: {sid}")
@@ -156,7 +146,7 @@ def main_env():
  switchcmd = "getswitchpower" # Leistung in mW, "inval" wenn unbekannt
  switchcmd = "getswitchenergy" # Energie in Wh seit Erstinbetriebnahme, "inval" wenn unbekannt
  switchcmd = "gettemperature" # Temperatur-Wert in 0,1 °C, negative und positive WertemöglichBsp. „200“ bedeutet 20°C
- retrieve_data(url, sid, switchcmd)
+ retrieve_data(url, sid, switchcmd, ain = ain_210)
 
 if __name__ == "__main__":
  main_env()
