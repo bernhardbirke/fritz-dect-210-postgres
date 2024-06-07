@@ -10,9 +10,15 @@ import hashlib
 import time
 import requests
 import urllib.request
+import logging
+
+from time import sleep
 
 import urllib.parse
 import xml.etree.ElementTree as ET
+
+from src.dect.postgresql_tasks import PostgresTasks
+from src.dect.config import Configuration
 
 
 
@@ -28,10 +34,10 @@ class DectToPostgres():
   def __init__(self,
   config: Configuration,
   client: PostgresTasks, 
-  box_url: str,
   ):
    self.config = config
    self.client = client
+   self.sid = "0000000000000000"
    self.LOGIN_SID_ROUTE = "/login_sid.lua?version=2"
    self.AUTOSWITCH_ROUTE = "/webservices/homeautoswitch.lua"
    self.print_console = True
@@ -47,13 +53,13 @@ class DectToPostgres():
     except Exception as ex:
         raise Exception("failed to get challenge") from ex
     if state.is_pbkdf2:
-        print("PBKDF2 supported")
+        logging.info("PBKDF2 supported")
         challenge_response = self.calculate_pbkdf2_response(state.challenge, password)
     else:
-        print("Falling back to MD5")
+        logging.info("Falling back to MD5")
         challenge_response = self.calculate_md5_response(state.challenge, password)
     if state.blocktime > 0:
-        print(f"Waiting for {state.blocktime} seconds...")
+        logging.info(f"Waiting for {state.blocktime} seconds...")
         time.sleep(state.blocktime)
     try:
         sid = self.send_response(box_url, username, challenge_response)
@@ -64,11 +70,18 @@ class DectToPostgres():
     return sid
 
   def validate_sid(self, box_url: str, sid: str) -> True | False:
-  """ Tests if sid is valid. Returns True when valid, otherwise False"""
+     """ Tests if sid is valid. Returns True when valid, otherwise False"""
      parameter = {"sid": sid}
      url = box_url + self.LOGIN_SID_ROUTE 
      response = requests.get(url, params=parameter)
-     return response
+     xml = ET.fromstring(response.content)
+     sid = xml.find("SID").text
+     print(response.text)
+     print(sid)
+     if sid != "0000000000000000":
+         return True
+     else:
+         return False
  
   
 
@@ -136,7 +149,6 @@ class DectToPostgres():
     parameter.update(kwargs)
     url = box_url + self.AUTOSWITCH_ROUTE
     response = requests.get(url, params=parameter)
-    # print(response.url)
     return response.text
 
 
@@ -148,47 +160,58 @@ class DectToPostgres():
         username = dect210_config["user"] 
         password = dect210_config["password"]
         ain_210 = dect210_config["ain"]
-      while True:
-        try:
-           if not self.validate_sid(url, self.sid):
-              self.sid = get_sid(url, username, password)
+        while True:
+         try:
+           if self.validate_sid(url, self.sid) != True:
+              self.sid = self.get_sid(url, username, password)
               logging.info(f"Successful login for user: {username}")
-              logging.info(f"sid: {sid}")
+              logging.info(f"sid: {self.sid}")
            
            #retrieve data from switch
-           #switchcmd = "getdevicelistinfos"
-           switchcmd = "getswitchpower" # Leistung in mW, "inval" wenn unbekannt
-           switch_power = int(retrieve_data(url, sid, switchcmd, ain = ain_210)) / 1000 #in W
+           try:
+               switchcmd = "getswitchpower" # Leistung in mW, "inval" wenn unbekannt
+               data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
+               switch_power = int(data) / 1000 #in W
+           except ValueError:
+               logging.error(f"Invalid Data: {data}")
            
-           switchcmd = "getswitchenergy" # Energie in Wh seit Erstinbetriebnahme, "inval" wenn unbekannt
-           switch_energy = int(retrieve_data(url, sid, switchcmd, ain = ain_210))
+           try:
+               switchcmd = "getswitchenergy" # Energie in Wh seit Erstinbetriebnahme, "inval" wenn unbekannt
+               data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
+               switch_energy = int(data)
+           except ValueError:
+               logging.error(f"Invalid Data: {data}")
+
+           try:
+               switchcmd = "gettemperature" # Temperatur-Wert in 0,1 °C, 
+               data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
+               switch_temperature = int(data) /10 #in °C
+           except ValueError:
+               logging.error(f"Invalid Data: {data}")
            
-           switchcmd = "gettemperature" # Temperatur-Wert in 0,1 °C, 
-           switch_temperature = int(retrieve_data(url, sid, switchcmd, ain = ain_210)) /10 #in °C
-           
-           
-           if print_console:
+           if self.print_console:
                print(f"power: {switch_power} W")
                print(f"energy: {switch_energy} Wh")
                print(f"temperature: {switch_temperature} °C")
            
            
            #save data to postgresql database
-           if to_postgresql:
-               self.data_id = self.client.insert_dect_210(power,energy,temperature)
+           if self.to_postgresql:
+               self.data_id = self.client.insert_dect_210(switch_power,switch_energy,switch_temperature)
                logging.info(f"Data written. Data id: {self.data_id}")
-               sleep(self.BACKOFF_INTERVAL)
+           
+           sleep(self.BACKOFF_INTERVAL)
 
-        except ConnectionError:
+         except ConnectionError:
            logging.error("No Connection available", exc_info=True)
            sleep(10)
            logging.info("Waited 10 seconds for connection")
-        except Exception as e:
+         except Exception as e:
            logging.error("Exception: {}".format(e), exc_info=True)
            sys.exit(1)
     
     except KeyboardInterrupt:
-    logging.info("Stopping program.")
+        logging.info("Stopping program.")
 
 
 def main():

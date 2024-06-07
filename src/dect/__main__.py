@@ -27,6 +27,7 @@ logging.basicConfig(
 
 
 dtop = DectToPostgres(config, client)
+dtop.to_postgresql = True
 dtop.run()
 
 
