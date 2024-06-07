@@ -1,6 +1,7 @@
 #specific files to ignore
 
 .env
+dect_210.service
 database.ini
 /dev/getsid.sh
 
