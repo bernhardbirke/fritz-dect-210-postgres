@@ -2,9 +2,10 @@
 
 .env
 database.ini
+/dev/getsid.sh
 
 #specific folders to ignore
-/dev/
+
 /manuals/
 
 

@@ -13,7 +13,7 @@ class Configuration:
         self.url_to_database = url_to_database
         self.url_yaml_config = url_yaml_config
 
-    def fronius_config(self, section: str = "fronius") -> dict:
+    def dect210_config(self, section: str = "dect210") -> dict:
         """define the details of a connection to the fronius api based on database.ini"""
         # create a parser
         parser = ConfigParser()
@@ -21,17 +21,17 @@ class Configuration:
         parser.read(self.url_to_database)
 
         # get section
-        fronius_con = {}
+        dect_con = {}
         if parser.has_section(section):
             params = parser.items(section)
             for param in params:
-                fronius_con[param[0]] = param[1]
+                dect_con[param[0]] = param[1]
         else:
             raise Exception(
                 f"Section {section} not found in the {self.url_to_database} file"
             )
 
-        return fronius_con
+        return dect_con
 
     def postgresql_config(self, section: str = "postgresql") -> dict:
         """define the details of a database connection based on database.ini"""
