@@ -18,7 +18,7 @@ loggingFile: str = os.path.join(ROOT_DIR, "dect210.log")
 
 # config of logging module (DEBUG / INFO / WARNING / ERROR / CRITICAL)
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     filename=loggingFile,
     encoding="utf-8",
     filemode="a",
@@ -28,7 +28,5 @@ logging.basicConfig(
 
 dtop = DectToPostgres(config, client)
 dtop.to_postgresql = True
+dtop.print_console = False
 dtop.run()
-
-
-# TODO: stop testing of ftop.run() after a certain time

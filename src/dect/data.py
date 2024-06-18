@@ -174,6 +174,7 @@ class DectToPostgres():
                switch_power = int(data) / 1000 #in W
            except ValueError:
                logging.error(f"Invalid Data: {data}")
+               continue
            
            try:
                switchcmd = "getswitchenergy" # Energie in Wh seit Erstinbetriebnahme, "inval" wenn unbekannt
@@ -181,6 +182,7 @@ class DectToPostgres():
                switch_energy = int(data)
            except ValueError:
                logging.error(f"Invalid Data: {data}")
+               continue
 
            try:
                switchcmd = "gettemperature" # Temperatur-Wert in 0,1 °C, 
@@ -188,6 +190,7 @@ class DectToPostgres():
                switch_temperature = int(data) /10 #in °C
            except ValueError:
                logging.error(f"Invalid Data: {data}")
+               continue
            
            if self.print_console:
                print(f"power: {switch_power} W")
