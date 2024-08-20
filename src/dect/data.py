@@ -156,8 +156,7 @@ class DectToPostgres():
         url = dect210_config["url"]
         username = dect210_config["user"] 
         password = dect210_config["password"]
-        dect210_devices = self.config.yaml_config()
-      
+        dect210_devices = self.config.yaml_config()      
         while True:
          try:
            if self.validate_sid(url, self.sid) != True:
@@ -166,9 +165,9 @@ class DectToPostgres():
               logging.info(f"sid: {self.sid}")
            
            #retrieve data from switch for all devices
-           for device in dect210_devices:
-               ain_210 = device["ain"]
-               table_name = device["table_name"]
+           for device in dect210_devices.keys():
+               ain_210 = dect210_devices[device]["ain"]
+               table_name = dect210_devices[device]["table_name"]
                try:
                    switchcmd = "getswitchpower" # Leistung in mW, "inval" wenn unbekannt
                    data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)

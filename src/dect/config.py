@@ -55,4 +55,4 @@ class Configuration:
 
     def yaml_config(self) -> dict:
         with open(self.url_yaml_config) as file:
-            return yaml.safe_load(file, Loader=yaml.FullLoader)
+            return yaml.load(file, Loader=yaml.FullLoader)

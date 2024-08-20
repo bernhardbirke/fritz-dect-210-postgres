@@ -44,7 +44,7 @@ class PostgresTasks:
         power: float,
         energy: float,
         temperature: float,
-        table_name:str = dect_210) -> int:
+        table_name:str = "dect_210") -> int:
         """insert a new data row into the dect_210 table"""
         sql = f"""INSERT INTO {table_name}(time, power, energy, temperature)
                 VALUES((NOW() AT TIME ZONE 'UTC'), %s, %s, %s) RETURNING data_id;"""
