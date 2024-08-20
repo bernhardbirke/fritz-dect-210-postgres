@@ -2,6 +2,7 @@
 
 .env
 dect_210.service
+dect210_devices.yaml
 database.ini
 /dev/getsid.sh
 

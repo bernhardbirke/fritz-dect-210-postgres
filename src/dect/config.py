@@ -8,7 +8,7 @@ class Configuration:
     def __init__(
         self,
         url_to_database: str = os.path.join(ROOT_DIR, "database.ini"),
-        url_yaml_config: str = os.path.join(ROOT_DIR, "main_config.yaml"),
+        url_yaml_config: str = os.path.join(ROOT_DIR, "dect210_devices.yaml"),
     ):
         self.url_to_database = url_to_database
         self.url_yaml_config = url_yaml_config
@@ -55,4 +55,4 @@ class Configuration:
 
     def yaml_config(self) -> dict:
         with open(self.url_yaml_config) as file:
-            return yaml.load(file, Loader=yaml.FullLoader)
+            return yaml.safe_load(file, Loader=yaml.FullLoader)

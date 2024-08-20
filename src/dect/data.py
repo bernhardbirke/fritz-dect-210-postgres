@@ -76,8 +76,6 @@ class DectToPostgres():
      response = requests.get(url, params=parameter)
      xml = ET.fromstring(response.content)
      sid = xml.find("SID").text
-     print(response.text)
-     print(sid)
      if sid != "0000000000000000":
          return True
      else:
@@ -90,7 +88,6 @@ class DectToPostgres():
     url = box_url + self.LOGIN_SID_ROUTE
     http_response = urllib.request.urlopen(url)
     xml = ET.fromstring(http_response.read())
-    # print(f"xml: {xml}")
     challenge = xml.find("Challenge").text
     blocktime = int(xml.find("BlockTime").text)
     return LoginState(challenge, blocktime)
@@ -159,7 +156,8 @@ class DectToPostgres():
         url = dect210_config["url"]
         username = dect210_config["user"] 
         password = dect210_config["password"]
-        ain_210 = dect210_config["ain"]
+        dect210_devices = self.config.yaml_config()
+      
         while True:
          try:
            if self.validate_sid(url, self.sid) != True:
@@ -167,42 +165,46 @@ class DectToPostgres():
               logging.info(f"Successful login for user: {username}")
               logging.info(f"sid: {self.sid}")
            
-           #retrieve data from switch
-           try:
-               switchcmd = "getswitchpower" # Leistung in mW, "inval" wenn unbekannt
-               data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
-               switch_power = int(data) / 1000 #in W
-           except ValueError:
-               logging.error(f"Invalid Data: {data}")
-               continue
+           #retrieve data from switch for all devices
+           for device in dect210_devices:
+               ain_210 = device["ain"]
+               table_name = device["table_name"]
+               try:
+                   switchcmd = "getswitchpower" # Leistung in mW, "inval" wenn unbekannt
+                   data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
+                   switch_power = int(data) / 1000 #in W
+               except ValueError:
+                   logging.error(f"Invalid Data: {data}")
+                   continue
            
-           try:
-               switchcmd = "getswitchenergy" # Energie in Wh seit Erstinbetriebnahme, "inval" wenn unbekannt
-               data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
-               switch_energy = int(data)
-           except ValueError:
-               logging.error(f"Invalid Data: {data}")
-               continue
-
-           try:
-               switchcmd = "gettemperature" # Temperatur-Wert in 0,1 °C, 
-               data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
-               switch_temperature = int(data) /10 #in °C
-           except ValueError:
-               logging.error(f"Invalid Data: {data}")
-               continue
+               try:
+                   switchcmd = "getswitchenergy" # Energie in Wh seit Erstinbetriebnahme, "inval" wenn unbekannt
+                   data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
+                   switch_energy = int(data)
+               except ValueError:
+                   logging.error(f"Invalid Data: {data}")
+                   continue
+    
+               try:
+                   switchcmd = "gettemperature" # Temperatur-Wert in 0,1 °C, 
+                   data = self.retrieve_data(url, self.sid, switchcmd, ain = ain_210)
+                   switch_temperature = int(data) /10 #in °C
+               except ValueError:
+                   logging.error(f"Invalid Data: {data}")
+                   continue
            
-           if self.print_console:
-               print(f"power: {switch_power} W")
-               print(f"energy: {switch_energy} Wh")
-               print(f"temperature: {switch_temperature} °C")
+               if self.print_console:
+                   print(f"device: {device}")
+                   print(f"power: {switch_power} W")
+                   print(f"energy: {switch_energy} Wh")
+                   print(f"temperature: {switch_temperature} °C")
            
            
-           #save data to postgresql database
-           if self.to_postgresql:
-               self.data_id = self.client.insert_dect_210(switch_power,switch_energy,switch_temperature)
-               logging.info(f"Data written. Data id: {self.data_id}")
-           
+               #save data to postgresql database
+               if self.to_postgresql:
+                   self.data_id = self.client.insert_dect_210(switch_power,switch_energy,switch_temperature, table_name= table_name)
+                   logging.info(f"Data written to {table_name}. Data id: {self.data_id}")
+               
            sleep(self.BACKOFF_INTERVAL)
 
          except ConnectionError:
